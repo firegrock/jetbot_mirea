@@ -12,65 +12,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from torch import int32
+import RPi.GPIO as GPIO
 import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String
 from std_msgs.msg import Int32
+from std_msgs.msg import Float32
+from std_msgs.msg import Bool
 
 
-class MinimalPublisher(Node):
-    left_speed = 0
-    right_speed = 0
-    speed_step = 1
-    i = 0
+class SpeedFeedback_Publisher(Node):
+    real_speed = 0.0
 
     def __init__(self):
         super().__init__('minimal_publisher')
-        self.publisher1_ = self.create_publisher(Int32, 'lspeed', 10)
-        self.publisher2_ = self.create_publisher(Int32, 'rspeed', 10)
+        
+        self.publisher1_ = self.create_publisher(Int32, 'real_lspeed', 10)
+
+        self.subscription = self.create_subscription(Bool, '/left_enc', self.listener_callback, 10)
+        self.subscription  # prevent unused variable warning
         
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
+        encoder_max_impulse_discriptor = ParameterDescriptor(description='This parameter is defined the maximum number of encoder' + "'" + 's impulses during measure period')
+        self.declare_parameter('max_impulses', '120', encoder_max_impulse_discriptor)
+
+        encoder_topic_name = ParameterDescriptor(description = 'Name of the topic where current state of fc_33 encoder is publishing. The default name is /left_enc')
+        self.declare_parameter('encoder_node_name', '/left_enc', encoder_topic_name)
+
     def timer_callback(self):
-        msg1 = Int32()
-        msg2 = Int32()
+        msg = Float32()
         
-        if self.i <= 20:
-            msg1.data = 60 - 5
-            msg2.data = 60
-        elif self.i > 20 and self.i <= 23:
-            msg1.data = -60 
-            msg2.data = 60
-        elif self.i > 24 and self.i <= 45:
-            msg1.data = 60 - 5
-            msg2.data = 60
-        elif self.i > 45 and self.i <= 48:
-            msg1.data = -60
-            msg2.data = 60
-        else:
-            self.i = 0
+        msg.data = 0
         
-        self.i = self.i+1
-        
-        self.publisher1_.publish(msg1)
-        self.publisher2_.publish(msg2)
+        self.publisher_.publish(msg)
+
         #self.get_logger().info('Publishing: "%i" "%i' % msg1.data, msg2.data)
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    real_speed_publisher = SpeedFeedback_Publisher()
 
-    rclpy.spin(minimal_publisher)
+    rclpy.spin(real_speed_publisher)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
+    GPIO.cleanup()  # cleanup all GPIOs
+    real_speed_publisher.destroy_node()
     rclpy.shutdown()
 
 

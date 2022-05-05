@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
                 'talker = py_pubsub.publisher_member_function:main',
                 'listener = py_pubsub.subscriber_member_function:main',
+                'fc-33-reader = py_pubsub.fc_33_reader:main',
         ],
     },
 )

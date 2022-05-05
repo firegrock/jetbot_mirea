@@ -18,22 +18,33 @@ from rclpy.node import Node
 from jetbot import Robot
 
 from std_msgs.msg import String
-
+from std_msgs.msg import Int32
 
 class MinimalSubscriber(Node):
 
     left_speed = 0
     right_speed = 0
+    robot = Robot()
 
     def __init__(self):
         super().__init__('minimal_subscriber')
-        self.subscription = self.create_subscription(float, 'lspeed', self.listener_callback, 10)
-        self.subscription = self.create_subscription(float, 'rspeed', self.listener_callback, 10)
+        self.subscription = self.create_subscription(Int32, '/lspeed', self.listener_l_callback, 10)
+        self.subscription = self.create_subscription(Int32, '/rspeed', self.listener_r_callback, 10)
         self.subscription  # prevent unused variable warning
 
-    def listener_callback(self, msg):
-        self.get_logger().info('I heard: "%f"' % msg.data)
         
+
+    def listener_l_callback(self, msg):
+        self.left_speed = msg.data
+        self.get_logger().info('I heard left speed: "%i"' % msg.data)
+        
+        self.robot.set_motors(self.left_speed/100, self.right_speed/100)
+    
+    def listener_r_callback(self, msg):
+        self.right_speed = msg.data
+        self.get_logger().info('I heard right speed: "%i"' % msg.data)
+
+        self.robot.set_motors(self.left_speed/100, self.right_speed/100)
 
 
 def main(args=None):
@@ -41,11 +52,9 @@ def main(args=None):
 
     minimal_subscriber = MinimalSubscriber()
 
-    robot = Robot()
-
     rclpy.spin(minimal_subscriber)
 
-    robot.set_motors(minimal_subscriber.left_speed, minimal_subscriber.right_speed)
+    
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
